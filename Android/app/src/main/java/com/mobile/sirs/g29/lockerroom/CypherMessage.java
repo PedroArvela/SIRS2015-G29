@@ -21,6 +21,11 @@ public class CypherMessage{
 		kGen.initialize(enthropy);
         final KeyPair keypair = kGen.generateKeyPair();
 
+        if(this.keyPairExist(location)){
+            //keypair already generated
+            return;
+        }
+
 		File privateKeyFile = new File(location, PRIVATE_KEY_FILE);
 		File publicKeyFile = new File(location, PUBLIC_KEY_FILE);
 

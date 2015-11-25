@@ -71,30 +71,32 @@ public class LoadingActivity extends AppCompatActivity {
 
         //actual loading activities
 
-        FileInputStream userFileStream;
-        String userProtectedString = null;
-        try{
-            userFileStream = new FileInputStream(new File(this.getFilesDir(), USER_FILE));
-            BufferedReader reader = new BufferedReader(new InputStreamReader(userFileStream));
-            String line;
-            while ((line = reader.readLine()) != null) {
-                //TODO: validate file content, location and format
-                userProtectedString = line;
+        CypherMessage cm = new CypherMessage();
+        SignMessage sm = new SignMessage();
+        try {
+            File signFolder = new File(this.getCacheDir().toString()+"/sign");
+            File cipherFolder = new File(this.getCacheDir().toString()+"/cipher");
+
+            if(signFolder.exists() && cipherFolder.exists()){
+                //Do nothing, keys are already generated
+                if(!cm.keyPairExist(cipherFolder.toString()) || !sm.keyPairExist(signFolder.toString())){
+                    //generate keys if somehow they where deleted
+                    cm.generateKey(1024, cipherFolder.toString());
+                    sm.generateKey(1024, signFolder.toString());
+                }
+            } else {
+                signFolder.mkdir();
+                cipherFolder.mkdir();
+
+                sm.generateKey(1024, signFolder.toString());
+                cm.generateKey(1024, cipherFolder.toString());
             }
 
-        } catch (FileNotFoundException e ){
-            e.printStackTrace();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-
-        if(userProtectedString == null){
-            Intent loginActivity = new Intent(this, LoginActivity.class);
-            startActivity(loginActivity);
-        } else {
             Intent mainActivity = new Intent(this, MainActivity.class);
-            mainActivity.putExtra("SECUREDCONTENT", userProtectedString);
             startActivity(mainActivity);
+
+        } catch (Exception e){
+
         }
     }
 

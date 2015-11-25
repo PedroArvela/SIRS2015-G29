@@ -28,6 +28,11 @@ public class SignMessage {
         File privateKeyFile = new File(location, PRIVATE_KEY_FILE);
         File publicKeyFile = new File(location, PUBLIC_KEY_FILE);
 
+        if(this.keyPairExist(location)){
+            //keypair already generated
+            return;
+        }
+
         privateKeyFile.createNewFile();
         publicKeyFile.createNewFile();
 
