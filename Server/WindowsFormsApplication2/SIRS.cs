@@ -12,9 +12,9 @@ using System.Windows.Forms;
 
 namespace WindowsFormsApplication2
 {
-    public partial class Form1 : Form
+    public partial class SIRS : Form
     {
-        public Form1()
+        public SIRS()
         {
             InitializeComponent();
 

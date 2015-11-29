@@ -13,6 +13,6 @@ C:\Users\Andre\Source\Repos\SIRS2015-G29\Server\WindowsFormsApplication2\obj\Deb
 C:\Users\Andre\Source\Repos\SIRS2015-G29\Server\WindowsFormsApplication2\bin\Debug\WindowsFormsApplication2.exe
 C:\Users\Andre\Source\Repos\SIRS2015-G29\Server\WindowsFormsApplication2\bin\Debug\WindowsFormsApplication2.pdb
 C:\Users\Andre\Source\Repos\SIRS2015-G29\Server\WindowsFormsApplication2\obj\Debug\WindowsFormsApplication2.csprojResolveAssemblyReference.cache
-C:\Users\Andre\Source\Repos\SIRS2015-G29\Server\WindowsFormsApplication2\obj\Debug\WindowsFormsApplication2.Form1.resources
 C:\Users\Andre\Source\Repos\SIRS2015-G29\Server\WindowsFormsApplication2\obj\Debug\WindowsFormsApplication2.Properties.Resources.resources
 C:\Users\Andre\Source\Repos\SIRS2015-G29\Server\WindowsFormsApplication2\obj\Debug\WindowsFormsApplication2.csproj.GenerateResource.Cache
+C:\Users\Andre\Source\Repos\SIRS2015-G29\Server\WindowsFormsApplication2\obj\Debug\WindowsFormsApplication2.SIRS.resources
