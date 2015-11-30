@@ -5,7 +5,7 @@ using System.Text;
 
 public class UDPListener
 {
-    private const int listenPort = 8082;
+    private const int listenPort = 8888;
 
     private static void StartListener()
     {

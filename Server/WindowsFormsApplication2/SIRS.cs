@@ -89,5 +89,11 @@ namespace WindowsFormsApplication2
             UDPListener.run();
             label1.Text = "Message Received";
         }
+
+        private void button4_Click(object sender, EventArgs e)
+        {
+            UDP_Sender.sendinfo();
+            label1.Text = "Info sent sucessfully!";
+        }
     }
 }
