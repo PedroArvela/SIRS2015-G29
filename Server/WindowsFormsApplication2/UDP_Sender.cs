@@ -10,7 +10,7 @@ class UDP_Sender
 
     private const int port = 8889;
     private const int listenPort = 8888;
-
+    private const int requestPort = 0;
 
     public static string GetLocalIPAddress()
     {
@@ -38,10 +38,11 @@ class UDP_Sender
         IPEndPoint ep = new IPEndPoint(broadcast, port);
 
         s.SendTo(sendbuf, ep);
-
+        s.Close();
     }
 
-    internal static void sendinfo()
+
+    internal static void sendinfo(string pbkey)
     {
         Socket s = new Socket(AddressFamily.InterNetwork, SocketType.Dgram,
             ProtocolType.Udp);
@@ -54,18 +55,33 @@ class UDP_Sender
         IPAddress broadcast = IPAddress.Parse("192.168.1.255");
         string serverName = System.Windows.Forms.SystemInformation.ComputerName;
 
+
         try
         {
             while (!done)
             {
+
                 byte[] bytes = listener.Receive(ref groupEP);
+
+                string returnData = Encoding.ASCII.GetString(bytes);
+                string[] receivedport = returnData.Split('|');
+                string p = receivedport[1];
 
                 byte[] sendbuf = Encoding.ASCII.GetBytes(serverName + "|" + GetLocalIPAddress() + "|" + port);
                 IPEndPoint ep = new IPEndPoint(broadcast, port);
 
                 s.SendTo(sendbuf, ep);
 
+                byte[] bytes2 = listener.Receive(ref groupEP);
+
+
+                byte[] sendbuf2 = Encoding.ASCII.GetBytes(pbkey);
+
+                s.SendTo(sendbuf2, ep);
+
+
                 done = true;
+
             }
 
         }
@@ -76,6 +92,7 @@ class UDP_Sender
         finally
         {
             listener.Close();
+            s.Close();
         }
 
     }

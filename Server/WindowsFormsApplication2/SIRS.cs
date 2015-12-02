@@ -21,48 +21,13 @@ namespace WindowsFormsApplication2
 
         }
 
-        RSACryptoServiceProvider rsa = null;
-        string publicPrivateKeyXML;
-        string publicOnlyKeyXML;
-    
-        public void AssignNewKey()
-        {
-            const int PROVIDER_RSA_FULL = 1;
-            const string CONTAINER_NAME = "KeyContainer";
-            CspParameters cspParams;
-            cspParams = new CspParameters(PROVIDER_RSA_FULL);
-            cspParams.KeyContainerName = CONTAINER_NAME;
-            cspParams.Flags = CspProviderFlags.UseMachineKeyStore;
-            cspParams.ProviderName = "Microsoft Strong Cryptographic Provider";
-            rsa = new RSACryptoServiceProvider(cspParams);
+        string publicOnlyKeyXML = "asjdasdlsjdalksjdasldjlksjkjda";
 
-            //Pair of public and private key as XML string.
-            publicPrivateKeyXML = rsa.ToXmlString(true);
-
-            //Private key in xml file, this string should be share to other parties
-            publicOnlyKeyXML = rsa.ToXmlString(false);
-        }
-
-        public byte[] Encrypt(string publicKeyXML, string dataToDycript)
-        {
-            RSACryptoServiceProvider rsa = new RSACryptoServiceProvider();
-            rsa.FromXmlString(publicKeyXML);
-
-            return rsa.Encrypt(ASCIIEncoding.ASCII.GetBytes(dataToDycript), true);
-        }
-
-        public string Decrypt(string publicPrivateKeyXML, byte[] encryptedData)
-        {
-            RSACryptoServiceProvider rsa = new RSACryptoServiceProvider();
-            rsa.FromXmlString(publicPrivateKeyXML);
-
-            return ASCIIEncoding.ASCII.GetString(rsa.Decrypt(encryptedData, true));
-        }
 
         private void button1_Click(object sender, EventArgs e)
         {
-            AssignNewKey();
-            UDP_Sender.sender(publicOnlyKeyXML);
+            //AssignNewKey();
+            //UDP_Sender.sender();
             label1.Text = "Broadcasted Public Key!";
 
         }
@@ -80,8 +45,10 @@ namespace WindowsFormsApplication2
 
         private void button2_Click(object sender, EventArgs e)
         {
-            AssignNewKey();
-            label1.Text = "Generation Successfull!";
+            key_gen.generate();
+            string p = key_gen.pbkey().Length.ToString();
+            //AssignNewKey();
+            label1.Text = p;
         }
 
         private void button3_Click(object sender, EventArgs e)
@@ -92,8 +59,14 @@ namespace WindowsFormsApplication2
 
         private void button4_Click(object sender, EventArgs e)
         {
-            UDP_Sender.sendinfo();
+            key_gen.generate();
+            string pb = System.Text.Encoding.UTF8.GetString(key_gen.pbkey());
+            UDP_Sender.sendinfo(publicOnlyKeyXML);
             label1.Text = "Info sent sucessfully!";
+            //UDP_Sender.sender(publicOnlyKeyXML);
+            label1.Text = "Pbkey sent sucessfully!";
+
+
         }
     }
 }
