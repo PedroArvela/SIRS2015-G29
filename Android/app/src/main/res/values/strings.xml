@@ -3,7 +3,11 @@
 
     <string name="dummy_button">Dummy Button</string>
     <string name="dummy_content">Locker\nRoom</string>
+    <string name="pref_previously_started">false</string>
     <string name="title_activity_login_screen">Sign in</string>
+
+    <!-- Strings related to Main activity -->
+    <string name="defaultProgressText">Initializing search...</string>
 
     <!-- Strings related to login -->
     <string name="prompt_email">Email</string>
