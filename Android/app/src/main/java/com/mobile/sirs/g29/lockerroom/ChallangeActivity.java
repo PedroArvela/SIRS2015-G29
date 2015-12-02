@@ -3,6 +3,7 @@ package com.mobile.sirs.g29.lockerroom;
 import android.app.Activity;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
@@ -11,6 +12,10 @@ import android.widget.TextView;
 
 import org.w3c.dom.Text;
 
+import java.io.FileInputStream;
+import java.io.ObjectInputStream;
+import java.security.PrivateKey;
+
 public class ChallangeActivity extends AppCompatActivity {
 
     String _computerName;
@@ -18,8 +23,7 @@ public class ChallangeActivity extends AppCompatActivity {
     int _computerPort;
     int tries = 0;
 
-    //TODO: make passphrase secured
-    String secret = "simpletest";
+    String secret = "UnsecuredTemplate";
 
     private void exchangeSessionkey(){
         //TODO: send session key to computer in a safe manner
@@ -27,6 +31,7 @@ public class ChallangeActivity extends AppCompatActivity {
 
     private boolean attemptChallange(String attempt){
         if(attempt.equals(secret)){
+            Log.d("SECRET", "Atempt: " + attempt + " SECRET: " + secret);
             this.exchangeSessionkey();
             return true;
         }
@@ -65,6 +70,16 @@ public class ChallangeActivity extends AppCompatActivity {
         _computerName = getIntent().getStringExtra("NAME");
         _computerIP = getIntent().getStringExtra("IP");
         _computerPort = Integer.parseInt(getIntent().getStringExtra("PORT"));
+
+        //grab passphrase from storage
+        try{
+            ObjectInputStream inputStream = new ObjectInputStream(new FileInputStream(this.getFilesDir().toString() + "/passphrase/passfile.pass"));
+            secret = (String) inputStream.readObject();
+            inputStream.close();
+
+        } catch (Exception e){
+            e.printStackTrace();
+        }
 
         ProgressBar pb = (ProgressBar)findViewById(R.id.challangeTriesbar);
         pb.setMax(15);

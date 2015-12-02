@@ -88,7 +88,11 @@ public class ComputerListAdapter extends ArrayAdapter<Computer>{
         }
 
         Computer computer = _computers.get(position);
-        holder.computerText.setText(computer.get_comptuerName() + "\n" + computer.get_computerIP());
+        String displayText = computer.get_comptuerName() + "\n" + computer.get_computerIP() + "\n" + computer.get_fingerprint();
+        if(!computer.get_status().equals(Computer.STATUS.NONE)){
+            displayText += "\n"+computer.get_status().toString();
+        }
+        holder.computerText.setText(displayText);
         holder.authIcon.setImageResource(computer.get_imageTag());
 
         return row;

@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/computerListItem"
     android:layout_width="fill_parent"
     android:layout_height="match_parent"
@@ -9,6 +9,7 @@
         android:id="@+id/computerItemImage"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:layout_alignParentLeft="true"
         android:src="@drawable/computericon"/>
 
     <TextView android:layout_width="wrap_content"
@@ -16,13 +17,16 @@
         android:layout_height="wrap_content"
         android:textAlignment="center"
         android:textStyle="bold"
-        android:text="TEMPLATE\nIP"/>
+        android:gravity="center_vertical"
+        android:layout_centerHorizontal="true"
+        android:text="TEMPLATE\nIP\nfingerprint\nStatus"/>
 
     <ImageView
         android:id="@+id/computerItemAuthorization"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:layout_alignParentRight="true"
         android:src="@drawable/computerlistitemunauthorized"/>
 
 
-</LinearLayout>
+</RelativeLayout>

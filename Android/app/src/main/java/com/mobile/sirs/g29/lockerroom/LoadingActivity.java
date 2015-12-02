@@ -1,13 +1,20 @@
 package com.mobile.sirs.g29.lockerroom;
 
 import android.annotation.SuppressLint;
+import android.app.AlertDialog;
+import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.SharedPreferences;
+import android.preference.PreferenceManager;
 import android.support.v7.app.ActionBar;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.os.Handler;
+import android.text.InputType;
+import android.util.Log;
 import android.view.MotionEvent;
 import android.view.View;
+import android.widget.EditText;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -16,6 +23,7 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.io.ObjectOutputStream;
 
 /**
  * An example full-screen activity that shows and hides the system UI (i.e.
@@ -46,6 +54,62 @@ public class LoadingActivity extends AppCompatActivity {
     private View mControlsView;
     private boolean mVisible;
 
+    private void createPassphraseMenu(String menuTitle){
+        final Intent mainActivity = new Intent(this, MainActivity.class);
+        final String passphraseFolderPath = this.getFilesDir().toString()+"/passphrase";
+
+        File passphraseFolder = new File(passphraseFolderPath);
+        File passphrase = new File(passphraseFolderPath+"/passfile.pass");
+        boolean firstBoot = !passphrase.isFile();
+
+        Log.d("BOOT", Boolean.toString(firstBoot));
+
+        passphraseFolder.mkdir();
+        Log.d("BOOT", "FOLDER CREATED: " + Boolean.toString(passphraseFolder.exists()));
+
+        //popout message that will insert passphrase
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setTitle(menuTitle);
+        builder.setCancelable(false);
+
+        /* Set up the input */
+        final EditText input = new EditText(this);
+
+        input.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_PASSWORD);
+        builder.setView(input);
+
+        builder.setPositiveButton("OK", new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                String passphrase = "";
+                passphrase = input.getText().toString();
+
+                try {
+                    File passFile = new File(passphraseFolderPath, "passfile.pass");
+                    passFile.createNewFile();
+                    Log.d("BOOT", "PASSFILE CREATED: " + passFile.exists());
+                    Log.d("BOOT", "PASSFILE CONTENT: " + passphrase);
+
+                    Log.d("BOOT", "PATH: "+ passphraseFolderPath);
+
+                    ObjectOutputStream publicKeyOS = new ObjectOutputStream(new FileOutputStream(passFile));
+                    publicKeyOS.writeObject(passphrase);
+                    publicKeyOS.close();
+                    publicKeyOS.flush();
+
+                } catch (IOException e){
+                    Log.e("BOOT", "EXCEPTION");
+                    e.printStackTrace();
+                }
+
+                startActivity(mainActivity);
+                finish();
+            }
+        });
+
+        builder.show();
+    }
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -73,9 +137,10 @@ public class LoadingActivity extends AppCompatActivity {
 
         CypherMessage cm = new CypherMessage();
         SignMessage sm = new SignMessage();
+
         try {
-            File signFolder = new File(this.getCacheDir().toString()+"/sign");
-            File cipherFolder = new File(this.getCacheDir().toString()+"/cipher");
+            File signFolder = new File(this.getFilesDir().toString()+"/sign");
+            File cipherFolder = new File(this.getFilesDir().toString()+"/cipher");
 
             if(signFolder.exists() && cipherFolder.exists()){
                 //Do nothing, keys are already generated
@@ -92,8 +157,23 @@ public class LoadingActivity extends AppCompatActivity {
                 cm.generateKey(1024, cipherFolder.toString());
             }
 
-            Intent mainActivity = new Intent(this, MainActivity.class);
-            startActivity(mainActivity);
+            SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(getBaseContext());
+            boolean previouslyStarted = prefs.getBoolean(getString(R.string.pref_previously_started), false);
+            if(!previouslyStarted) {
+                //CODE TO BE EXECUTED ON APPLICATION FIRST RUN
+
+                SharedPreferences.Editor edit = prefs.edit();
+                edit.putBoolean(getString(R.string.pref_previously_started), Boolean.TRUE);
+                edit.commit();
+
+                this.createPassphraseMenu("New passphrase");
+            }
+            else{
+                //CODE TO BE EXECUTED ON EVERY APPLICATION RUN
+
+                startActivity(new Intent(this, MainActivity.class));
+                finish();
+            }
 
         } catch (Exception e){
 

@@ -1,16 +1,19 @@
 package com.mobile.sirs.g29.lockerroom;
 
 import android.content.Intent;
+import android.os.AsyncTask;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
+import android.view.Window;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.ListView;
 import android.widget.TextView;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.TreeMap;
@@ -24,28 +27,21 @@ public class MainActivity extends AppCompatActivity {
     private ComputerListAdapter _computerAdapter;
     private ArrayList<String> _computerNameList = new ArrayList<String>();
 
+    private int lastSelected = -1;
     private int challangeActivityReturn = 0; //0 == no return code, 1 == success, -1 == fail or return
 
     private void updateComputerList(){
-        String displayText;
+        RemoteComunication rc = new RemoteComunication();
+        //AsyncTask snt = new ScanNetworkTask();
 
-        //TODO: reformulate method to actually fetch a valid list of computers in the network
-        _computers.put("sith", new Computer("sith", "127.0.0.1", 1234));
-        _computers.put("jedi", new Computer("jedi", "127.0.0.1", 1235));
-        _computers.put("mandalorian", new Computer("mandalorian", "127.0.0.1", 1236));
-        _computers.put("chiss", new Computer("chiss", "127.0.0.1", 1237));
+        try{
+            AsyncTask<Integer, String, ArrayList<String>> snt = new ScanNetworkTask((TextView)findViewById(R.id.scanProgressText), (Button)findViewById(R.id.testInsertionButton), _computerAdapter, _computers);
 
-        //Real code
-        for(Computer comp : _computers.values()){
-            if(!_computerAdapter.exists(comp)) {
-                /*
-                displayText = comp.get_comptuerName() + "\n" + comp.get_computerIP().toString();
-                _computerNameList.add(displayText);
-                */
-                _computerAdapter.add(comp);
-            }
+            Log.d("Scan-Network", "Executing task...");
+            snt.execute(5000);
+        } catch(Exception e){
+            e.printStackTrace();
         }
-        _computerAdapter.notifyDataSetChanged();
     }
 
     private void revokeComputer(Computer c){
@@ -55,12 +51,12 @@ public class MainActivity extends AppCompatActivity {
     private void authorizeComputer(int selected){
         boolean action = false;
         Computer target = _comp.get(selected);
+        lastSelected = selected;
 
         if(target.is_authorized()){
-            target.set_authorized(action);
+            target.set_authorized(false);
         } else {
             action = true;
-            target.set_authorized(action);
         }
 
         if(action) {
@@ -68,13 +64,19 @@ public class MainActivity extends AppCompatActivity {
             challange.putExtra("NAME", target.get_comptuerName());
             challange.putExtra("IP", target.get_computerIP());
             challange.putExtra("PORT", Integer.toString(target.get_port()));
+            challange.putExtra("FINGERPRINT", target.get_fingerprint());
             startActivityForResult(challange, CHALLANGE_ACTIVITY_CODE);
             if(challangeActivityReturn == 1){
-                //challange was passed, do nothing
+                //if challange was passed, update GUI and database
+                Log.d("TARGET", "SET TRUE");
+                target.set_authorized(true);
             }
             else if(challangeActivityReturn == -1){
                 //challange was failed
                 target.set_authorized(false);
+                Log.d("TARGET", "SET FALSE");
+            } else {
+                Log.d("TARGET", "THIS SHOULD NOT HAPPEN");
             }
         }
         else{
@@ -87,13 +89,20 @@ public class MainActivity extends AppCompatActivity {
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         // Check which request we're responding to
         if (requestCode == CHALLANGE_ACTIVITY_CODE) {
+            Log.d("Challange->Main", "Returing...");
+            Computer target = _comp.get(lastSelected);
             // Make sure the request was successful
             if (resultCode == RESULT_OK) {
                 challangeActivityReturn = 1;
+                target.set_authorized(true);
+                Log.d("Challange->Main", "Passed...");
             }
             if (resultCode == RESULT_CANCELED){
                 challangeActivityReturn = -1;
+                target.set_authorized(false);
+                Log.d("Challange->Main", "Failed...");
             }
+            _computerAdapter.notifyDataSetChanged();
         }
     }
 
