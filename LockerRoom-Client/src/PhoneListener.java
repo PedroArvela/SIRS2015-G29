@@ -1,6 +1,11 @@
 import java.io.BufferedReader;
+import java.io.DataInputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.io.ObjectOutputStream;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
@@ -77,6 +82,23 @@ public class PhoneListener implements Runnable {
 		return pubk;
 	}
 
+	public byte[] sendFile(String filename) throws IOException {
+		File file = new File("C:/Users/Andre/Documents/" + filename + ".txt");
+
+		// create a buffer for the file data
+		int len = (int) file.length();
+		byte[] message = new byte[len];
+		FileInputStream in = new FileInputStream(file);
+		int bytes_read = 0, n;
+		do {
+			n = in.read(message, bytes_read, len - bytes_read);
+			bytes_read += n;
+		} while ((bytes_read < len) && (n != -1));
+		
+		in.close();
+		return message;
+	}
+
 	@Override
 	public void run() {
 		String recv_message;
@@ -148,10 +170,10 @@ public class PhoneListener implements Runnable {
 				requester.connect(SEND_ADD, REQUEST_PORT);
 				requester.send(keyPacket);
 				requester.disconnect();
-				
+
 				this.transfer();
 				done = true;
-				
+
 				System.out.println("Key sent!");
 
 			} catch (SocketException e) {
@@ -174,19 +196,26 @@ public class PhoneListener implements Runnable {
 				// Request send
 				BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
 				System.out.println("Enter c to Encrypt or d to Decrypt");
-				String s = br.readLine().trim();
-				byte[] req = s.getBytes();
-				DatagramPacket type = new DatagramPacket(req, req.length, SEND_ADD, REQUEST_PORT);
+				String type = br.readLine().trim();
+				byte[] req = type.getBytes();
+				DatagramPacket req_type = new DatagramPacket(req, req.length, SEND_ADD, REQUEST_PORT);
 				requester.connect(SEND_ADD, REQUEST_PORT);
-				requester.send(type);
+				requester.send(req_type);
 				requester.disconnect();
 
 				// Send File to cipher
-				String FILE_TO_SEND = "C:/Users/Andre/Documents/test.txt";
-				byte[] file = FILE_TO_SEND.getBytes();
+				
+				//TO DO: Test file transfer
+				/*BufferedReader read = new BufferedReader(new InputStreamReader(System.in));
+				System.out.println("Insert File Name:");
+				String filename = br.readLine().trim();
+				byte[] file = this.sendFile(filename);;*/
+				
+				//DEMO
+				byte[] file = ("gatos").getBytes();
 				DatagramPacket fil = new DatagramPacket(file, file.length, SEND_ADD, REQUEST_PORT);
 				requester.connect(SEND_ADD, REQUEST_PORT);
-				requester.send(type);
+				requester.send(fil);
 				requester.disconnect();
 
 				// Receive deciphered file
