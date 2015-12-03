@@ -1,18 +1,23 @@
 import java.io.BufferedReader;
-import java.io.DataInputStream;
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.io.ObjectOutputStream;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.SocketException;
+import java.security.InvalidKeyException;
+import java.security.KeyFactory;
 import java.security.KeyPair;
 import java.security.NoSuchAlgorithmException;
 import java.security.PublicKey;
+import java.security.spec.X509EncodedKeySpec;
+
+import javax.crypto.BadPaddingException;
+import javax.crypto.IllegalBlockSizeException;
+import javax.crypto.NoSuchPaddingException;
+
 
 public class PhoneListener implements Runnable {
 	private static final int RECV_PORT = 8888;
@@ -20,13 +25,14 @@ public class PhoneListener implements Runnable {
 	private int REQUEST_PORT;
 	private InetAddress SEND_ADD;
 	private KeyPair key;
+	private PublicKey mbKey;
 	private DatagramSocket broadcast_recv_send;
 	private DatagramSocket requester;
 	private DatagramPacket recvPacket;
 	private DatagramPacket sendPacket;
-	private DatagramPacket reqPacket;
+	private DatagramPacket reqPacketPort;
 	private DatagramPacket keyPacket;
-	private DatagramPacket reqPacket2;
+	private DatagramPacket reqPacketKey;
 	private byte[] buffer;
 
 	private void initialize() {
@@ -47,26 +53,20 @@ public class PhoneListener implements Runnable {
 		}
 	}
 
-	private void getMobileKey() {
-		// Saves Mobile Public Key
 
-		// mobile_key = new byte[reqPacket.getLength()-6];
-		// mobile_key = (new String(buffer2, 0,
-		// reqPacket2.getLength())).getBytes();
+	private PublicKey getKey(byte[] key) {
+		try {
 
-		// byte[] b = Base64.decode(mobile_key, Base64.DEFAULT);
+			X509EncodedKeySpec keySpec = new X509EncodedKeySpec(key);
+			KeyFactory keyFactory = KeyFactory.getInstance("RSA");
+			PublicKey publicKey = keyFactory.generatePublic(keySpec);
+			
+			return publicKey;
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
 
-		/*
-		 * KeyFactory keyfactory = KeyFactory.getInstance("RSA");
-		 * //X509EncodedKeySpec publicKeySpec = new
-		 * X509EncodedKeySpec(mobile_key); PKCS8EncodedKeySpec publickk = new
-		 * PKCS8EncodedKeySpec(mobile_key);
-		 * keyfactory.generatePrivate(publickk);
-		 */
-		// PublicKey mobile =
-		// KeyFactory.getInstance("RSA").generatePublic(new
-		// X509EncodedKeySpec(mobile_key));
-
+		return null;
 	}
 
 	private KeyPair generateKeys() throws NoSuchAlgorithmException, IOException {
@@ -81,6 +81,13 @@ public class PhoneListener implements Runnable {
 
 		return pubk;
 	}
+	
+	private byte[] encript(String message, PublicKey key) throws InvalidKeyException, NoSuchPaddingException, NoSuchAlgorithmException, IllegalBlockSizeException, BadPaddingException{
+		byte[] msg = Cypher.encript(message, key);
+		
+		return msg;
+	}
+	
 
 	public byte[] sendFile(String filename) throws IOException {
 		File file = new File("C:/Users/Andre/Documents/" + filename + ".txt");
@@ -94,7 +101,7 @@ public class PhoneListener implements Runnable {
 			n = in.read(message, bytes_read, len - bytes_read);
 			bytes_read += n;
 		} while ((bytes_read < len) && (n != -1));
-		
+
 		in.close();
 		return message;
 	}
@@ -144,19 +151,30 @@ public class PhoneListener implements Runnable {
 				// Listen for service port
 				System.out.println("Waiting for mobile...");
 
-				reqPacket = new DatagramPacket(buffer, buffer.length);
-				reqPacket2 = new DatagramPacket(bufferAux, buffer.length);
-				broadcast_recv_send.receive(reqPacket);
-				broadcast_recv_send.receive(reqPacket2);
-				req_message = new String(buffer, 0, reqPacket.getLength());
-				System.out.println(req_message);
+				reqPacketPort = new DatagramPacket(buffer, buffer.length);
+				reqPacketKey = new DatagramPacket(bufferAux, buffer.length);
 
+				broadcast_recv_send.receive(reqPacketPort);
+				broadcast_recv_send.receive(reqPacketKey);
+				
+				req_message = new String(buffer, 0, reqPacketPort.getLength());
+				
 				// Saves Request Port
 				REQUEST_PORT = Integer.parseInt(req_message);
 				System.out.println("Saved Request Port!");
 
+				// Generates Mobile pbKey
+				byte[] data = reqPacketKey.getData();
+				mbKey = this.getKey(data);
+				
+				// Saves Mobile Public Key
+				System.out.println(mbKey);
+				System.out.println("Mobile Key Saved!");
+
+				//Opens request socket, closes broadcast socket
 				this.request(REQUEST_PORT);
 				broadcast_recv_send.close();
+				
 				System.out.println("Sending PC public key...");
 
 				// Generates keypair
@@ -204,15 +222,23 @@ public class PhoneListener implements Runnable {
 				requester.disconnect();
 
 				// Send File to cipher
+
+				// TO DO: Test file transfer
+				/*
+				 * BufferedReader read = new BufferedReader(new
+				 * InputStreamReader(System.in)); System.out.println(
+				 * "Insert File Name:"); String filename = br.readLine().trim();
+				 * byte[] file = this.sendFile(filename);;
+				 */
+
+				// DEMO
+				byte[] file = ("gatos fazem miau").getBytes();
 				
-				//TO DO: Test file transfer
-				/*BufferedReader read = new BufferedReader(new InputStreamReader(System.in));
-				System.out.println("Insert File Name:");
-				String filename = br.readLine().trim();
-				byte[] file = this.sendFile(filename);;*/
+				//Not Tested
+				byte[] encrypt = this.encript("gatos fazem miau", mbKey);
+				System.out.println(encrypt);
+
 				
-				//DEMO
-				byte[] file = ("gatos").getBytes();
 				DatagramPacket fil = new DatagramPacket(file, file.length, SEND_ADD, REQUEST_PORT);
 				requester.connect(SEND_ADD, REQUEST_PORT);
 				requester.send(fil);
@@ -229,6 +255,21 @@ public class PhoneListener implements Runnable {
 
 			e.printStackTrace();
 		} catch (IOException e) {
+			e.printStackTrace();
+		} catch (InvalidKeyException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (NoSuchPaddingException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (NoSuchAlgorithmException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (IllegalBlockSizeException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (BadPaddingException e) {
+			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 

@@ -22,7 +22,7 @@ public class Cypher{
         return keypair;
 	}
 
-    public final byte[] encript(String message, PublicKey key) throws NoSuchPaddingException, NoSuchAlgorithmException, InvalidKeyException, IllegalBlockSizeException, BadPaddingException{
+    public final static byte[] encript(String message, PublicKey key) throws NoSuchPaddingException, NoSuchAlgorithmException, InvalidKeyException, IllegalBlockSizeException, BadPaddingException{
         byte[] cipheredMessage = null;
         final Cipher cipher = Cipher.getInstance(ALGORITHM);
 
@@ -31,7 +31,7 @@ public class Cypher{
         return cipheredMessage;
     }
 
-    public final String decript(byte[] message, PrivateKey key) throws NoSuchPaddingException, NoSuchAlgorithmException, InvalidKeyException, IllegalBlockSizeException, BadPaddingException{
+    public final static String decript(byte[] message, PrivateKey key) throws NoSuchPaddingException, NoSuchAlgorithmException, InvalidKeyException, IllegalBlockSizeException, BadPaddingException{
         String plainMessage = null;
         final Cipher cipher = Cipher.getInstance(ALGORITHM);
 
