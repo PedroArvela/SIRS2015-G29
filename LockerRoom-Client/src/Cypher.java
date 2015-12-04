@@ -6,17 +6,24 @@ import java.security.NoSuchAlgorithmException;
 import java.security.NoSuchProviderException;
 import java.security.PrivateKey;
 import java.security.PublicKey;
+import java.security.Security;
 
 import javax.crypto.BadPaddingException;
 import javax.crypto.Cipher;
 import javax.crypto.IllegalBlockSizeException;
 import javax.crypto.NoSuchPaddingException;
 
+import org.bouncycastle.jce.provider.BouncyCastleProvider;
+
 
 public class Cypher{
 	private static final String ALGORITHM = "RSA";
+	
+
 
 	public final static KeyPair generateKey() throws IOException, NoSuchAlgorithmException, NoSuchProviderException{
+		Security.addProvider(new BouncyCastleProvider());
+
 		final KeyPairGenerator kGen = KeyPairGenerator.getInstance(ALGORITHM, "BC");
 		kGen.initialize(1024);
         final KeyPair keypair = kGen.generateKeyPair();
@@ -25,21 +32,25 @@ public class Cypher{
         return keypair;
 	}
 
-    public final static byte[] encript(String message, PublicKey key) throws NoSuchPaddingException, NoSuchAlgorithmException, InvalidKeyException, IllegalBlockSizeException, BadPaddingException{
-        byte[] cipheredMessage = null;
-        final Cipher cipher = Cipher.getInstance(ALGORITHM);
+    public final static byte[] encript(byte[] message, PublicKey key) throws NoSuchPaddingException, NoSuchAlgorithmException, InvalidKeyException, IllegalBlockSizeException, BadPaddingException{
+		Security.addProvider(new BouncyCastleProvider());
+
+    	byte[] cipheredMessage = null;
+        final Cipher cipher = Cipher.getInstance("RSA/ECB/PKCS1Padding");
 
         cipher.init(Cipher.ENCRYPT_MODE, key);
-        cipheredMessage = cipher.doFinal(message.getBytes());
+        cipheredMessage = cipher.doFinal(message);
         return cipheredMessage;
     }
 
-    public final static String decript(byte[] message, PrivateKey key) throws NoSuchPaddingException, NoSuchAlgorithmException, InvalidKeyException, IllegalBlockSizeException, BadPaddingException{
-        String plainMessage = null;
-        final Cipher cipher = Cipher.getInstance(ALGORITHM);
+    public final static byte[] decript(byte[] message, PrivateKey key) throws NoSuchPaddingException, NoSuchAlgorithmException, InvalidKeyException, IllegalBlockSizeException, BadPaddingException{
+		Security.addProvider(new BouncyCastleProvider());
+
+    	byte[] plainMessage = null;
+        final Cipher cipher = Cipher.getInstance("RSA/ECB/PKCS1Padding");
 
         cipher.init(Cipher.DECRYPT_MODE, key);
-        plainMessage = new String(cipher.doFinal());
+        plainMessage = cipher.doFinal(message);
         return plainMessage;
     }
 }
