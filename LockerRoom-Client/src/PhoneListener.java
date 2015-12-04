@@ -1,7 +1,6 @@
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.DatagramPacket;
@@ -14,7 +13,6 @@ import java.security.KeyPair;
 import java.security.NoSuchAlgorithmException;
 import java.security.NoSuchProviderException;
 import java.security.PrivateKey;
-import java.security.Provider;
 import java.security.PublicKey;
 import java.security.Security;
 import java.security.spec.X509EncodedKeySpec;
@@ -103,7 +101,7 @@ public class PhoneListener implements Runnable {
 	}
 
 	public byte[] sendFile(String filename) throws IOException {
-		File file = new File("C:/Users/Andre/Documents/" + filename + ".txt");
+		File file = new File("C:/" + filename + ".txt");
 
 		// create a buffer for the file data
 		int len = (int) file.length();
@@ -118,6 +116,7 @@ public class PhoneListener implements Runnable {
 		in.close();
 		return message;
 	}
+
 	private void sendPacket(byte[] send, int PORT) throws IOException {
 		DatagramPacket dat = new DatagramPacket(send, send.length, SEND_ADD, PORT);
 		requester.connect(SEND_ADD, PORT);
@@ -125,7 +124,7 @@ public class PhoneListener implements Runnable {
 		requester.disconnect();
 
 	}
-	
+
 	@Override
 	public void run() {
 		String recv_message;
@@ -148,8 +147,6 @@ public class PhoneListener implements Runnable {
 
 				// Generates keypair
 				key = this.generateKeys();
-				
-				System.out.println(key.getPublic());
 
 				recvPacket = new DatagramPacket(buffer, buffer.length);
 
@@ -195,8 +192,6 @@ public class PhoneListener implements Runnable {
 				mbKey = this.getPBKey(data);
 				System.out.println("Mobile Key Saved!");
 
-				System.out.println(mbKey);
-
 				// Opens request socket
 				this.request(REQUEST_PORT);
 
@@ -205,7 +200,7 @@ public class PhoneListener implements Runnable {
 				// Retrieves public key encoded
 				pbkey = this.pbkeyEncoded(key);
 
-				// Sends public key				
+				// Sends public key
 				this.sendPacket(pbkey, ANDROID_PORT);
 
 				// Closes broadcast socket
@@ -241,31 +236,17 @@ public class PhoneListener implements Runnable {
 		return req;
 	}
 
-	private byte[] InputPhrase() throws IOException, InvalidKeyException, NoSuchPaddingException,
-			NoSuchAlgorithmException, IllegalBlockSizeException, BadPaddingException {
-
-		BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
-		System.out.println("Enter text");
-		String type = br.readLine();
-		byte[] req = type.getBytes();
-		byte[] encode = this.encript(req, mbKey);
-
-		return encode;
-	}
-
-
 	public void transfer() {
 
 		try {
 			while (true) {
-				
-				byte[] buffer2 = new byte[2048];
-				byte[] buffer3 = new byte[2048];
 
+				byte[] buffer2 = new byte[2048];
+				byte[] buffer3 = new byte[4096];
 
 				// Request send
 				byte[] in = this.Input();
-				
+
 				this.sendPacket(in, REQUEST_PORT);
 
 				// Not Implemented
@@ -277,12 +258,13 @@ public class PhoneListener implements Runnable {
 				 * "Insert File Name:"); String filename = br.readLine().trim();
 				 * byte[] file = this.sendFile(filename);;
 				 */
-			
-				// DEMO - Creates byte[] from string encripted with mobile public key
+
+				// DEMO - Creates byte[] from string encripted with mobile
+				// public key
 				byte[] file = ("Os gatos fazem miau.".getBytes());
 				byte[] enc = this.encript(file, mbKey);
 
-				//Send encripted message to cypher
+				// Send encripted message to cypher
 				this.sendPacket(enc, REQUEST_PORT);
 
 				// Receive ciphered file
@@ -290,38 +272,42 @@ public class PhoneListener implements Runnable {
 				requester.receive(reqPacket3);
 				byte[] req3 = reqPacket3.getData();
 
-				
-				/*FileWriter fw = new FileWriter(new File("C:/Users/Andre/Documents/teste2.txt"));
-			    byte[] receiveData = new byte[reqPacket3.getLength()];    
-			    while (receiveData != null) {
-	                fw.write(req_message3);
-	                fw.flush();
-	            }
-	            fw.flush();
-	            fw.close();*/
-				
-				//byte[] req2 = this.Input();
-				
-				//Prints ciphered message
-				String cipmsg = new String(req3, 0, req3.length);
+				/*
+				 * FileWriter fw = new FileWriter(new
+				 * File("C:/Users/Andre/Documents/teste2.txt")); byte[]
+				 * receiveData = new byte[reqPacket3.getLength()]; while
+				 * (receiveData != null) { fw.write(req_message3); fw.flush(); }
+				 * fw.flush(); fw.close();
+				 */
+
+				// byte[] req2 = this.Input();
+
+				// Prints ciphered message
+				String cipmsg = new String(req3, 0, reqPacket3.getLength());
 				System.out.println(cipmsg);
-				
+				boolean test = true;
+
+				if (test){
 				byte[] d = "d".getBytes();
 				this.sendPacket(d, REQUEST_PORT);
-		
-				
+
 				DatagramPacket file2 = new DatagramPacket(req3, reqPacket3.getLength(), SEND_ADD, REQUEST_PORT);
 				requester.connect(SEND_ADD, REQUEST_PORT);
 				requester.send(file2);
 				requester.disconnect();
-				
+
 				// Receive deciphered file
 				DatagramPacket reqPacket4 = new DatagramPacket(buffer3, buffer3.length);
 				requester.receive(reqPacket4);
-				byte[] mymessage = this.decript(reqPacket4.getData(), key.getPrivate());
+				byte[] dc = reqPacket4.getData();
+				PrivateKey pk = key.getPrivate();
+				byte[] mymessage = this.decript(dc, pk);
+				//System.out.println(mymessage.toString());
 				String req_message4 = new String(mymessage, 0, mymessage.length);
 				System.out.println(req_message4);
-				
+				test = false;
+				}
+
 			}
 
 		} catch (SocketException e) {
