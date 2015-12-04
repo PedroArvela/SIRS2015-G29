@@ -1,6 +1,7 @@
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.DatagramPacket;
@@ -11,12 +12,16 @@ import java.security.InvalidKeyException;
 import java.security.KeyFactory;
 import java.security.KeyPair;
 import java.security.NoSuchAlgorithmException;
+import java.security.NoSuchProviderException;
 import java.security.PublicKey;
+import java.security.Security;
 import java.security.spec.X509EncodedKeySpec;
 
 import javax.crypto.BadPaddingException;
 import javax.crypto.IllegalBlockSizeException;
 import javax.crypto.NoSuchPaddingException;
+
+import org.bouncycastle.jce.provider.BouncyCastleProvider;
 
 
 public class PhoneListener implements Runnable {
@@ -26,6 +31,7 @@ public class PhoneListener implements Runnable {
 	private InetAddress SEND_ADD;
 	private KeyPair key;
 	private PublicKey mbKey;
+	private PublicKey pub;
 	private DatagramSocket broadcast_recv_send;
 	private DatagramSocket requester;
 	private DatagramPacket recvPacket;
@@ -34,6 +40,7 @@ public class PhoneListener implements Runnable {
 	private DatagramPacket keyPacket;
 	private DatagramPacket reqPacketKey;
 	private byte[] buffer;
+
 
 	private void initialize() {
 		try {
@@ -53,12 +60,11 @@ public class PhoneListener implements Runnable {
 		}
 	}
 
-
 	private PublicKey getKey(byte[] key) {
 		try {
 
 			X509EncodedKeySpec keySpec = new X509EncodedKeySpec(key);
-			KeyFactory keyFactory = KeyFactory.getInstance("RSA");
+			KeyFactory keyFactory = KeyFactory.getInstance("RSA", "BC");
 			PublicKey publicKey = keyFactory.generatePublic(keySpec);
 			
 			return publicKey;
@@ -69,14 +75,14 @@ public class PhoneListener implements Runnable {
 		return null;
 	}
 
-	private KeyPair generateKeys() throws NoSuchAlgorithmException, IOException {
+	private KeyPair generateKeys() throws NoSuchAlgorithmException, IOException, NoSuchProviderException {
 		KeyPair pair = Cypher.generateKey();
 
 		return pair;
 	}
 
 	private byte[] pbkeyEncoded(KeyPair key) {
-		PublicKey pub = key.getPublic();
+		pub = key.getPublic();
 		byte[] pubk = pub.getEncoded();
 
 		return pubk;
@@ -117,12 +123,19 @@ public class PhoneListener implements Runnable {
 		boolean done = false;
 
 		this.initialize();
+		Security.addProvider(new BouncyCastleProvider());
 
+		
+
+		System.out.println(pub);
 		while (!done) {
 			try {
 
 				buffer = new byte[2042];
 				bufferAux = new byte[2042];
+				
+				// Generates keypair
+				key = this.generateKeys();
 
 				recvPacket = new DatagramPacket(buffer, buffer.length);
 
@@ -162,32 +175,33 @@ public class PhoneListener implements Runnable {
 				// Saves Request Port
 				REQUEST_PORT = Integer.parseInt(req_message);
 				System.out.println("Saved Request Port!");
-
+				
 				// Generates Mobile pbKey
 				byte[] data = reqPacketKey.getData();
+				
 				mbKey = this.getKey(data);
 				
 				// Saves Mobile Public Key
-				System.out.println(mbKey);
 				System.out.println("Mobile Key Saved!");
 
 				//Opens request socket, closes broadcast socket
 				this.request(REQUEST_PORT);
-				broadcast_recv_send.close();
 				
 				System.out.println("Sending PC public key...");
-
-				// Generates keypair
-				key = this.generateKeys();
-
+				
 				// Retrieves public key encoded
 				pbkey = this.pbkeyEncoded(key);
+				
+				System.out.println(pub);
 
 				// Sends public key
-				keyPacket = new DatagramPacket(pbkey, pbkey.length, SEND_ADD, REQUEST_PORT);
-				requester.connect(SEND_ADD, REQUEST_PORT);
-				requester.send(keyPacket);
-				requester.disconnect();
+				System.out.println(ANDROID_PORT);
+
+				keyPacket = new DatagramPacket(pbkey, pbkey.length, SEND_ADD, ANDROID_PORT);
+				broadcast_recv_send.connect(SEND_ADD, ANDROID_PORT);
+				broadcast_recv_send.send(keyPacket);
+				broadcast_recv_send.disconnect();
+				broadcast_recv_send.close();
 
 				this.transfer();
 				done = true;
@@ -202,6 +216,9 @@ public class PhoneListener implements Runnable {
 			} catch (NoSuchAlgorithmException e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
+			} catch (NoSuchProviderException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
 			}
 		}
 	}
@@ -210,6 +227,8 @@ public class PhoneListener implements Runnable {
 
 		try {
 			while (true) {
+				
+				byte[] buffer2 = new byte[2024];
 
 				// Request send
 				BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
@@ -236,7 +255,7 @@ public class PhoneListener implements Runnable {
 				
 				//Not Tested
 				byte[] encrypt = this.encript("gatos fazem miau", mbKey);
-				System.out.println(encrypt);
+				//System.out.println(encrypt);
 
 				
 				DatagramPacket fil = new DatagramPacket(file, file.length, SEND_ADD, REQUEST_PORT);
@@ -246,9 +265,37 @@ public class PhoneListener implements Runnable {
 
 				// Receive deciphered file
 				DatagramPacket reqPacket3 = new DatagramPacket(buffer, buffer.length);
+				byte[] req3 = reqPacket3.getData();
 				requester.receive(reqPacket3);
-				String req_message3 = new String(buffer, 0, reqPacket3.getLength());
-				System.out.println(req_message3);
+				
+				
+				/*FileWriter fw = new FileWriter(new File("C:/Users/Andre/Documents/teste2.txt"));
+			    byte[] receiveData = new byte[reqPacket3.getLength()];    
+			    while (receiveData != null) {
+	                fw.write(req_message3);
+	                fw.flush();
+	            }
+	            fw.flush();
+	            fw.close();*/
+				
+				byte[] req2 = ("d").getBytes();
+				DatagramPacket req_type2 = new DatagramPacket(req2, req2.length, SEND_ADD, REQUEST_PORT);
+				requester.connect(SEND_ADD, REQUEST_PORT);
+				requester.send(req_type2);
+				requester.disconnect();
+				
+				System.out.println(req3);
+				DatagramPacket file2 = new DatagramPacket(req3, req3.length, SEND_ADD, REQUEST_PORT);
+				requester.connect(SEND_ADD, REQUEST_PORT);
+				requester.send(file2);
+				requester.disconnect();
+				
+				// Receive deciphered file
+				DatagramPacket reqPacket4 = new DatagramPacket(buffer2, buffer2.length);
+				requester.receive(reqPacket3);
+				String req_message4 = new String(buffer, 0, reqPacket3.getLength());
+				System.out.println(req_message4);
+				
 			}
 
 		} catch (SocketException e) {

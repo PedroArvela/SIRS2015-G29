@@ -3,6 +3,7 @@ import java.security.InvalidKeyException;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
 import java.security.NoSuchAlgorithmException;
+import java.security.NoSuchProviderException;
 import java.security.PrivateKey;
 import java.security.PublicKey;
 
@@ -11,13 +12,15 @@ import javax.crypto.Cipher;
 import javax.crypto.IllegalBlockSizeException;
 import javax.crypto.NoSuchPaddingException;
 
+
 public class Cypher{
 	private static final String ALGORITHM = "RSA";
 
-	public final static KeyPair generateKey() throws IOException, NoSuchAlgorithmException{
-		final KeyPairGenerator kGen = KeyPairGenerator.getInstance(ALGORITHM);
+	public final static KeyPair generateKey() throws IOException, NoSuchAlgorithmException, NoSuchProviderException{
+		final KeyPairGenerator kGen = KeyPairGenerator.getInstance(ALGORITHM, "BC");
 		kGen.initialize(1024);
         final KeyPair keypair = kGen.generateKeyPair();
+        System.out.println("Keys Generated Sucessfully!");
 
         return keypair;
 	}
