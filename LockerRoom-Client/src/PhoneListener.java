@@ -16,6 +16,7 @@ import java.security.PrivateKey;
 import java.security.PublicKey;
 import java.security.Security;
 import java.security.spec.X509EncodedKeySpec;
+import java.util.Arrays;
 
 import javax.crypto.BadPaddingException;
 import javax.crypto.IllegalBlockSizeException;
@@ -87,7 +88,7 @@ public class PhoneListener implements Runnable {
 	}
 
 	private byte[] encript(byte[] message, PublicKey key) throws InvalidKeyException, NoSuchPaddingException,
-			NoSuchAlgorithmException, IllegalBlockSizeException, BadPaddingException {
+			NoSuchAlgorithmException, IllegalBlockSizeException, BadPaddingException, NoSuchProviderException {
 		byte[] msg = Cypher.encript(message, key);
 
 		return msg;
@@ -146,7 +147,7 @@ public class PhoneListener implements Runnable {
 				bufferAux = new byte[2048];
 
 				// Generates keypair
-				key = this.generateKeys();
+				key = this.generateKeys();				
 
 				recvPacket = new DatagramPacket(buffer, buffer.length);
 
@@ -202,6 +203,7 @@ public class PhoneListener implements Runnable {
 
 				// Sends public key
 				this.sendPacket(pbkey, ANDROID_PORT);
+				System.out.println("Key sent!");
 
 				// Closes broadcast socket
 				broadcast_recv_send.close();
@@ -209,7 +211,6 @@ public class PhoneListener implements Runnable {
 				this.transfer();
 				done = true;
 
-				System.out.println("Key sent!");
 
 			} catch (SocketException e) {
 
@@ -284,10 +285,8 @@ public class PhoneListener implements Runnable {
 
 				// Prints ciphered message
 				String cipmsg = new String(req3, 0, reqPacket3.getLength());
-				System.out.println(cipmsg);
-				boolean test = true;
+				System.out.println("Cyphered: " + cipmsg);
 
-				if (test){
 				byte[] d = "d".getBytes();
 				this.sendPacket(d, REQUEST_PORT);
 
@@ -297,16 +296,19 @@ public class PhoneListener implements Runnable {
 				requester.disconnect();
 
 				// Receive deciphered file
-				DatagramPacket reqPacket4 = new DatagramPacket(buffer3, buffer3.length);
-				requester.receive(reqPacket4);
-				byte[] dc = reqPacket4.getData();
+				byte[] test = new byte[2048];
+				DatagramPacket file3 = new DatagramPacket(test, test.length);
+				requester.receive(file3);
+				
+				byte[] dc = file3.getData();
+				byte[] treated = Arrays.copyOf(dc, 128);
 				PrivateKey pk = key.getPrivate();
-				byte[] mymessage = this.decript(dc, pk);
-				//System.out.println(mymessage.toString());
-				String req_message4 = new String(mymessage, 0, mymessage.length);
-				System.out.println(req_message4);
-				test = false;
-				}
+				byte[] mymessage = this.decript(treated, pk);
+
+				//Print Deciphered message
+				String dech = new String(mymessage, 0, mymessage.length);
+				System.out.println("Deciphered: " + dech);
+				
 
 			}
 
@@ -328,6 +330,9 @@ public class PhoneListener implements Runnable {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		} catch (BadPaddingException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (NoSuchProviderException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}

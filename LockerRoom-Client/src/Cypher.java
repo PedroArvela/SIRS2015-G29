@@ -25,18 +25,18 @@ public class Cypher{
 		Security.addProvider(new BouncyCastleProvider());
 
 		final KeyPairGenerator kGen = KeyPairGenerator.getInstance(ALGORITHM, "BC");
-		kGen.initialize(4096);
+		kGen.initialize(1024);
         final KeyPair keypair = kGen.generateKeyPair();
         System.out.println("Keys Generated Sucessfully!");
 
         return keypair;
 	}
 
-    public final static byte[] encript(byte[] message, PublicKey key) throws NoSuchPaddingException, NoSuchAlgorithmException, InvalidKeyException, IllegalBlockSizeException, BadPaddingException{
+    public final static byte[] encript(byte[] message, PublicKey key) throws NoSuchPaddingException, NoSuchAlgorithmException, InvalidKeyException, IllegalBlockSizeException, BadPaddingException, NoSuchProviderException{
 		Security.addProvider(new BouncyCastleProvider());
 
     	byte[] cipheredMessage = null;
-        final Cipher cipher = Cipher.getInstance("RSA/ECB/PKCS1Padding");
+        final Cipher cipher = Cipher.getInstance("RSA/ECB/PKCS1Padding", "BC");
 
         cipher.init(Cipher.ENCRYPT_MODE, key);
         cipheredMessage = cipher.doFinal(message);
