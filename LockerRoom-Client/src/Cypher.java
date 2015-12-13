@@ -25,7 +25,7 @@ public class Cypher{
 		Security.addProvider(new BouncyCastleProvider());
 
 		final KeyPairGenerator kGen = KeyPairGenerator.getInstance(ALGORITHM, "BC");
-		kGen.initialize(1024);
+		kGen.initialize(256);
         final KeyPair keypair = kGen.generateKeyPair();
         System.out.println("Keys Generated Sucessfully!");
 
