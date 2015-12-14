@@ -25,14 +25,9 @@ public class ChallangeActivity extends AppCompatActivity {
 
     String secret = "UnsecuredTemplate";
 
-    private void exchangeSessionkey(){
-        //TODO: send session key to computer in a safe manner
-    }
-
     private boolean attemptChallange(String attempt){
         if(attempt.equals(secret)){
             Log.d("SECRET", "Atempt: " + attempt + " SECRET: " + secret);
-            this.exchangeSessionkey();
             return true;
         }
         return false;
@@ -43,6 +38,12 @@ public class ChallangeActivity extends AppCompatActivity {
         if(tries < 3){
             attempt = ((EditText)findViewById(R.id.challangePassPhrase)).getText().toString();
             if(this.attemptChallange(attempt)){
+                //START SERVICE TASK FOR COMPUTER
+                ComputerListAdapter adapter = ((InformedApplication)getApplicationContext()).getAdapter();
+                Computer target = adapter.getComputer(_computerName);
+                target.set_service(new ServiceTask(target, adapter, this));
+                target.get_service().execute(target);
+
                 //return to main activity with OK signal
                 setResult(Activity.RESULT_OK);
                 finish();

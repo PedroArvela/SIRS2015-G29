@@ -103,4 +103,17 @@ public class ComputerListAdapter extends ArrayAdapter<Computer>{
         TextView computerText;
     }
 
+    @Override
+    public synchronized void notifyDataSetChanged() {
+        super.notifyDataSetChanged();
+    }
+
+    public Computer getComputer(String name){
+        for(Computer c : _computers){
+            if(c.get_comptuerName().equals(name)){
+                return c;
+            }
+        }
+        return null;
+    }
 }

@@ -4,6 +4,7 @@ import android.content.Intent;
 import android.os.AsyncTask;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.util.Base64;
 import android.util.Log;
 import android.view.View;
 import android.view.Window;
@@ -14,6 +15,8 @@ import android.widget.ListView;
 import android.widget.TextView;
 
 import java.io.File;
+import java.security.Provider;
+import java.security.Security;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.TreeMap;
@@ -21,6 +24,7 @@ import java.util.TreeMap;
 public class MainActivity extends AppCompatActivity {
 
     static final int CHALLANGE_ACTIVITY_CODE = 10;
+    private static final int SERVICE_TIMEOUT = 2500;
 
     private TreeMap<String, Computer> _computers = new TreeMap<String, Computer>();
     private ArrayList<Computer> _comp;
@@ -31,21 +35,26 @@ public class MainActivity extends AppCompatActivity {
     private int challangeActivityReturn = 0; //0 == no return code, 1 == success, -1 == fail or return
 
     private void updateComputerList(){
-        RemoteComunication rc = new RemoteComunication();
-        //AsyncTask snt = new ScanNetworkTask();
+        String path = this.getFilesDir().toString()+"/messageCipher";
 
         try{
-            AsyncTask<Integer, String, ArrayList<String>> snt = new ScanNetworkTask((TextView)findViewById(R.id.scanProgressText), (Button)findViewById(R.id.testInsertionButton), _computerAdapter, _computers);
+            AsyncTask<Integer, String, ArrayList<Computer>> snt = new ScanNetworkTask((TextView)findViewById(R.id.scanProgressText), (Button)findViewById(R.id.testInsertionButton), _computerAdapter, _computers, path, this);
 
             Log.d("Scan-Network", "Executing task...");
-            snt.execute(5000);
+            snt.execute(SERVICE_TIMEOUT);
         } catch(Exception e){
             e.printStackTrace();
         }
     }
 
     private void revokeComputer(Computer c){
-        //TODO: revoke computer session key
+        //Stops computer service
+        Log.d("CANCEL-SERVICE", "Cancelling service for: " + c.get_comptuerName());
+        if(c.get_service().getStatus().equals(AsyncTask.Status.RUNNING) || c.get_service().getStatus().equals(AsyncTask.Status.PENDING))
+            c.get_service().cancel(true);
+        else{
+            Log.e("CANCEL-SERVICE", "Service was already stoped");
+        }
     }
 
     private void authorizeComputer(int selected){
@@ -111,10 +120,15 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
+        for(Provider p : Security.getProviders()){
+            Log.d("Providers", "Provider: " + p.toString());
+        }
+
         _comp = new ArrayList<Computer>();
 
         ListView computerList = (ListView)findViewById(R.id.computerListView);
         _computerAdapter = new ComputerListAdapter(this, R.layout.computer_list_item, _comp);
+        ((InformedApplication)getApplicationContext()).setAdapter(_computerAdapter);
         computerList.setAdapter(_computerAdapter);
 
         computerList.setOnItemClickListener(new AdapterView.OnItemClickListener() {
@@ -132,6 +146,5 @@ public class MainActivity extends AppCompatActivity {
                 updateComputerList();
             }
         });
-
     }
 }

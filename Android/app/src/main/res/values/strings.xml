@@ -9,6 +9,17 @@
     <!-- Strings related to Main activity -->
     <string name="defaultProgressText">Initializing search...</string>
 
+    <!-- Important static Paths -->
+    <string name="signFolder">/sign</string>
+    <string name="messageCipherFolder">/messageCipher</string>
+    <string name="secretFolder">/secret</string>
+    <string name="publicKey">/public.key</string>
+    <string name="privateKey">/private.key</string>
+    <string name="secretKey">/secret.key</string>
+
+    <!-- Strings realted to loading app -->
+    <string name="initialLoadText">Initializing application...</string>
+
     <!-- Strings related to login -->
     <string name="prompt_email">Email</string>
     <string name="prompt_password">Password (optional)</string>

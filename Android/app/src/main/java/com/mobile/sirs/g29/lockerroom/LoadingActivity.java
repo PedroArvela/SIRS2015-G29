@@ -5,6 +5,7 @@ import android.app.AlertDialog;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.os.AsyncTask;
 import android.preference.PreferenceManager;
 import android.support.v7.app.ActionBar;
 import android.support.v7.app.AppCompatActivity;
@@ -15,6 +16,7 @@ import android.util.Log;
 import android.view.MotionEvent;
 import android.view.View;
 import android.widget.EditText;
+import android.widget.TextView;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -97,17 +99,58 @@ public class LoadingActivity extends AppCompatActivity {
                     publicKeyOS.close();
                     publicKeyOS.flush();
 
+                    SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(getBaseContext());
+                    SharedPreferences.Editor edit = prefs.edit();
+                    edit.putBoolean(getString(R.string.pref_previously_started), Boolean.TRUE);
+                    edit.commit();
+
                 } catch (IOException e){
                     Log.e("BOOT", "EXCEPTION");
                     e.printStackTrace();
                 }
-
-                startActivity(mainActivity);
-                finish();
             }
         });
 
         builder.show();
+    }
+
+    private void initializeKeys(){
+        SignMessage sm = new SignMessage();
+        SimmetricCypherMessage scm = new SimmetricCypherMessage();
+        CypherMessage cm = new CypherMessage();
+
+        File signKeyFolder = new File(this.getFilesDir().toString()+"/sign");
+        File messageKeyFolder = new File(this.getFilesDir().toString()+"/messageCipher");
+        File cipherKeyFolder = new File(this.getFilesDir().toString()+"/secret");
+
+        try{
+            //update globals
+            ((InformedApplication)getApplicationContext()).set_msgKeyFolder(messageKeyFolder.toString());
+            Log.d("GLOBAL", ((InformedApplication) getApplicationContext()).get_msgKeyFolder());
+
+            scm.generateKey(cipherKeyFolder.toString());
+
+            Log.d("SignKey", "Initializing...");
+            signKeyFolder.mkdir();
+            Log.d("SignKey", "SignFolder Exists: " + (signKeyFolder.isDirectory() && signKeyFolder.exists()));
+            sm.generateKey(4096, signKeyFolder.toString());
+            File signPubKeyFile = new File(signKeyFolder.toString()+"/public.key");
+            File signPrivKeyFile = new File(signKeyFolder.toString()+"/private.key");
+            Log.d("SignKey", "Sign Pub File exists: " + (signPubKeyFile.exists() && signPubKeyFile.isFile()));
+            Log.d("SignKey", "Sign Priv File exists: " + (signPrivKeyFile.exists() && signPrivKeyFile.isFile()));
+
+            Log.d("msgKey", "Initializing...");
+            messageKeyFolder.mkdir();
+            Log.d("msgKey", "msgFolder Exists: " + (messageKeyFolder.isDirectory() && messageKeyFolder.exists()));
+            cm.generateKey(4096, messageKeyFolder.toString());
+            File msgPubKeyFile = new File(messageKeyFolder.toString()+"/public.key");
+            File msgPrivKeyFile = new File(messageKeyFolder.toString()+"/private.key");
+            Log.d("msgPubKey", "Message Pub File exists: " + (msgPubKeyFile.exists() && msgPubKeyFile.isFile()));
+            Log.d("msgPrivKey", "Message Priv File exists: " + (msgPrivKeyFile.exists() && msgPrivKeyFile.isFile()));
+        } catch(Exception e){
+            e.printStackTrace();
+            Log.e("Keys", "Exception");
+        }
     }
 
     @Override
@@ -134,50 +177,25 @@ public class LoadingActivity extends AppCompatActivity {
         // while interacting with the UI.
 
         //actual loading activities
-
-        CypherMessage cm = new CypherMessage();
-        SignMessage sm = new SignMessage();
-
+        InitializeKeysTask ikt = new InitializeKeysTask(this, (TextView)findViewById(R.id.fullscreen_content), LoadingActivity.this);
         try {
-            File signFolder = new File(this.getFilesDir().toString()+"/sign");
-            File cipherFolder = new File(this.getFilesDir().toString()+"/cipher");
-
-            if(signFolder.exists() && cipherFolder.exists()){
-                //Do nothing, keys are already generated
-                if(!cm.keyPairExist(cipherFolder.toString()) || !sm.keyPairExist(signFolder.toString())){
-                    //generate keys if somehow they where deleted
-                    cm.generateKey(1024, cipherFolder.toString());
-                    sm.generateKey(1024, signFolder.toString());
-                }
-            } else {
-                signFolder.mkdir();
-                cipherFolder.mkdir();
-
-                sm.generateKey(1024, signFolder.toString());
-                cm.generateKey(1024, cipherFolder.toString());
-            }
-
             SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(getBaseContext());
             boolean previouslyStarted = prefs.getBoolean(getString(R.string.pref_previously_started), false);
             if(!previouslyStarted) {
                 //CODE TO BE EXECUTED ON APPLICATION FIRST RUN
 
-                SharedPreferences.Editor edit = prefs.edit();
-                edit.putBoolean(getString(R.string.pref_previously_started), Boolean.TRUE);
-                edit.commit();
-
+                //this.initializeKeys();
                 this.createPassphraseMenu("New passphrase");
             }
             else{
                 //CODE TO BE EXECUTED ON EVERY APPLICATION RUN
 
-                startActivity(new Intent(this, MainActivity.class));
-                finish();
             }
 
         } catch (Exception e){
 
         }
+        ikt.execute();
     }
 
     @Override
