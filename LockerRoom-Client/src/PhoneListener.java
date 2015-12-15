@@ -53,7 +53,8 @@ public class PhoneListener implements Runnable {
 	private BigInteger challengeMOB = null;
 	private String origin;
 	private String destination;
-
+	private PrivateKey pvkey;
+	
 	private void initialize() {
 		try {
 			broadcast_recv_send = new DatagramSocket(RECV_PORT);
@@ -162,7 +163,7 @@ public class PhoneListener implements Runnable {
 				buffer = new byte[2048];
 				// Generates keypair
 				key = this.generateKeys();
-				PrivateKey pvkey = key.getPrivate();
+				pvkey = key.getPrivate();
 
 				recvPacket = new DatagramPacket(buffer, buffer.length);
 
@@ -313,6 +314,7 @@ public class PhoneListener implements Runnable {
 			while (true) {
 
 				byte[] buffer2 = new byte[2048];
+				byte[] bufferDec = new byte[2048];
 
 				// Request send
 				byte[] in = this.Input();
@@ -348,24 +350,46 @@ public class PhoneListener implements Runnable {
 					this.sendPacket(MsgtoSend, REQUEST_PORT);
 
 					// Receive ciphered file
-					DatagramPacket reqPacket3 = new DatagramPacket(buffer2, buffer2.length);
-					requester.receive(reqPacket3);
-					byte[] req3 = reqPacket3.getData();
+					DatagramPacket cipheredMsg = new DatagramPacket(buffer2, buffer2.length);
+					requester.receive(cipheredMsg);
+					byte[] cipMsg = cipheredMsg.getData();
+					
+					Message ciphMsg = Message.retriveMessage(cipMsg);
+
+					byte[] DecPCcha = this.decript(ciphMsg.get_pcChallange(), pvkey);
+					byte[] DecMOBcha = this.decript(ciphMsg.get_phoneChallange(), pvkey);
+					
+					challengePC = challengePC.add(new BigInteger("1"));
+					System.out.println(challengePC);
+					challengeMOB = challengeMOB.add(new BigInteger("1"));
+					System.out.println(challengeMOB);
+					
+					if(challengePC.equals(new BigInteger(DecPCcha))){
+						System.out.println("Challenge PC OK!");
+					}
+					
+					if(challengeMOB.equals(new BigInteger(DecMOBcha))){
+						System.out.println("Challenge MOB OK!");
+					}
+					
+					
+					
+					byte[] ciphContent = ciphMsg.get_Content();
 
 					// Saves ciphered message to file
 					FileOutputStream outputStream = new FileOutputStream("C:/cyphtest.txt");
 					// FileOutputStream outputStream = new
 					// FileOutputStream("C:/Users/Andre/Documents/cyphtest.txt");
-					outputStream.write(req3);
+					outputStream.write(ciphContent);
 					outputStream.close();
 
 					// Prints ciphered message
-					String cipmsg = new String(req3, 0, reqPacket3.getLength());
+					String cipmsg = new String(ciphContent, 0, ciphContent.length);
 					System.out.println("Cyphered: " + cipmsg);
 
+					
+					
 					// Decipher DEMO
-					byte[] dec = "d".getBytes();
-					this.sendPacket(dec, REQUEST_PORT);
 
 					// Read bytes from encrypted file to byte[]
 					Path pathDec = Paths.get("C:/cyphtest.txt");
@@ -373,31 +397,65 @@ public class PhoneListener implements Runnable {
 					// Paths.get("C:/Users/Andre/Documents/cyphtest.txt");
 					byte[] fileDec = Files.readAllBytes(pathDec);
 
-					// Sends encrypted message to decipher
-					DatagramPacket file2 = new DatagramPacket(fileDec, reqPacket3.getLength(), SEND_ADD, REQUEST_PORT);
-					requester.connect(SEND_ADD, REQUEST_PORT);
-					requester.send(file2);
-					requester.disconnect();
+					//Challenge Inc
+					challengePC = challengePC.add(new BigInteger("1"));
+					System.out.println(challengePC);
+					challengeMOB = challengeMOB.add(new BigInteger("1"));
+					System.out.println(challengeMOB);
+
+					
+					byte[] encPC3 = this.encript(challengePC.toByteArray(), mbKey);
+					byte[] encMOB3 = this.encript(challengeMOB.toByteArray(), mbKey);
+					
+					// Send encripted message to decypher
+					Message EncMsgDec = new Message(origin, destination, encPC3, encMOB3);
+					EncMsgDec.set_Content(fileDec);
+					EncMsgDec.set_Type(Message.REQUEST.DICIPHER);
+					byte[] MsgtoDec;
+
+					MsgtoDec = Message.getEncoded(EncMsgDec);
+
+					this.sendPacket(MsgtoDec, REQUEST_PORT);
 
 					// Receive deciphered file
-					byte[] test = new byte[128];
-					DatagramPacket file3 = new DatagramPacket(test, test.length);
-					requester.receive(file3);
+					DatagramPacket DecipheredMsg = new DatagramPacket(bufferDec, bufferDec.length);
+					requester.receive(DecipheredMsg);
+					byte[] DecipMsg = DecipheredMsg.getData();
+					
+					Message DeciphMsg = Message.retriveMessage(DecipMsg);
 
-					// Use PC private key to get real message
-					byte[] dc = file3.getData();
-					PrivateKey pk = key.getPrivate();
-					byte[] mymessage = this.decript(dc, pk);
+					byte[] DecPCcha2 = this.decript(ciphMsg.get_pcChallange(), pvkey);
+					byte[] DecMOBcha2 = this.decript(ciphMsg.get_phoneChallange(), pvkey);
+					
+					challengePC = challengePC.add(new BigInteger("1"));
+					System.out.println(challengePC);
+					challengeMOB = challengeMOB.add(new BigInteger("1"));
+					System.out.println(challengeMOB);
+					
+					if(challengePC.equals(new BigInteger(DecPCcha2))){
+						System.out.println("Challenge PC OK!");
+					}
+					
+					if(challengeMOB.equals(new BigInteger(DecMOBcha2))){
+						System.out.println("Challenge MOB OK!");
+					}
+					
+					
+					
+					byte[] DeciphContent = DeciphMsg.get_Content();
+					byte[] Content = this.decript(DeciphContent, pvkey);
 
-					// Saves deciphered message to file
+
+					// Saves ciphered message to file
 					FileOutputStream outputStreamDec = new FileOutputStream("C:/dectest.txt");
-					// FileOutputStream outputStreamDec = new
-					// FileOutputStream("C:/Users/Andre/Documents/dectest.txt");
-					outputStreamDec.write(mymessage);
+					// FileOutputStream outputStream = new
+					// FileOutputStream("C:/Users/Andre/Documents/cyphtest.txt");
+					outputStreamDec.write(Content);
 					outputStreamDec.close();
-					// Print Deciphered message
-					String dech = new String(mymessage, 0, mymessage.length);
-					System.out.println("Deciphered: " + dech);
+
+					// Prints ciphered message
+					String Decipmsg = new String(DeciphContent, 0, DeciphContent.length);
+					System.out.println("Cyphered: " + Decipmsg);
 				} else {
 					System.out.println("Please choose c for the DEMO");
 				}
@@ -456,6 +514,9 @@ public class PhoneListener implements Runnable {
 		NoSuchProviderException e)
 
 		{
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (ClassNotFoundException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
