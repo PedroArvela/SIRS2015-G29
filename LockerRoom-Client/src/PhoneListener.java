@@ -454,7 +454,7 @@ public class PhoneListener implements Runnable {
 					outputStreamDec.close();
 
 					// Prints ciphered message
-					String Decipmsg = new String(DeciphContent, 0, DeciphContent.length);
+					String Decipmsg = new String(Content, 0, Content.length);
 					System.out.println("Decyphered: " + Decipmsg);
 				} else {
 					System.out.println("Please choose c for the DEMO");
