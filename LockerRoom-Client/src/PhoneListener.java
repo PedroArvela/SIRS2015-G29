@@ -54,6 +54,8 @@ public class PhoneListener implements Runnable {
 	private String origin;
 	private String destination;
 	private PrivateKey pvkey;
+	private boolean done = false;
+
 	
 	private void initialize() {
 		try {
@@ -148,10 +150,41 @@ public class PhoneListener implements Runnable {
 
 	}
 
+	private byte[] Input() throws IOException {
+
+		BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+		System.out.println("Enter c to Encrypt or d to Decrypt");
+		String type = br.readLine().trim().toLowerCase();
+		byte[] req = type.getBytes();
+
+		return req;
+	}
+	
+	private void ChallengeInc(){
+		challengePC = challengePC.add(new BigInteger("1"));
+		challengeMOB = challengeMOB.add(new BigInteger("1"));
+	}
+	
+	private void ChallengeCheck(byte[] PCchallenge,byte[] MOBchallenge){
+		
+		if(challengePC.equals(new BigInteger(PCchallenge))){
+			System.out.println("Challenge PC OK!");
+		}else{
+			System.out.println("Invalid Challenge! Exiting...");
+			System.exit(0);
+		}
+		
+		if(challengeMOB.equals(new BigInteger(MOBchallenge))){
+			System.out.println("Challenge MOB OK!");
+		}else{
+			System.out.println("Invalid Challenge! Exiting...");
+			System.exit(0);
+		}
+	}
+	
 	@Override
 	public void run() {
 		byte[] pbkey;
-		boolean done = false;
 
 		this.initialize();
 		Security.addProvider(new BouncyCastleProvider());
@@ -161,15 +194,18 @@ public class PhoneListener implements Runnable {
 			try {
 
 				buffer = new byte[2048];
+				
 				// Generates keypair
 				key = this.generateKeys();
+				
+				//Get private key
 				pvkey = key.getPrivate();
 
+				
 				recvPacket = new DatagramPacket(buffer, buffer.length);
-
 				System.out.println("Waiting for mobile...");
 
-				// FIRST MESSAGE
+				// BROADCAST MESSAGE
 				broadcast_recv_send.receive(recvPacket);
 
 				// Saves Mobile Public Key
@@ -180,10 +216,10 @@ public class PhoneListener implements Runnable {
 				mbKey = this.getPBKey(keymob);
 
 				System.out.println("Mobile Key Saved!");
-				System.out.println(mbKey);
 				SEND_ADD = recvPacket.getAddress();
+				
 
-				// SECOND MESSAGE
+				// FIRST MESSAGE
 
 				System.out.println("Sending PC public key...");
 
@@ -193,23 +229,21 @@ public class PhoneListener implements Runnable {
 				origin = InetAddress.getLocalHost().toString();
 				destination = SEND_ADD.toString();
 				
+				//PC challenge and encriptions
 				byte[] chaPC = challengePC.toByteArray();
-
 				byte[] ENCchaPC = this.encript(chaPC, mbKey);
 				byte[] ENCpbkey = this.encript(pbkey, mbKey);
 						
+				//Generate message
 				Message firstMsg = new Message(origin, destination, ENCchaPC, null);
 				firstMsg.set_Content(ENCpbkey);
 				byte[] first;
 
 				first = Message.getEncoded(firstMsg);
 
-
 				// Sends public key
 				this.sendPacketBroad(first, ANDROID_PORT);
 				System.out.println("Key sent!");
-				System.out.println(pbkey);
-				System.out.println(challengePC);
 
 				// Listen for service port
 				System.out.println("Waiting for mobile...");
@@ -217,18 +251,17 @@ public class PhoneListener implements Runnable {
 				reqPacketPort = new DatagramPacket(buffer, buffer.length);
 				broadcast_recv_send.receive(reqPacketPort);
 
+				//Extract Port data and challenges
 				byte[] PortData = reqPacketPort.getData();
 				Message PortMsg = Message.retriveMessage(PortData);
 
 				byte[] DecPCcha = this.decript(PortMsg.get_pcChallange(), pvkey);
 				byte[] DecMOBcha = this.decript(PortMsg.get_phoneChallange(), pvkey);
 				
-				BigInteger cha1 = new BigInteger(DecPCcha);
-				System.out.println(cha1);
 				challengeMOB = new BigInteger(DecMOBcha);
-				System.out.println(challengeMOB);
-				
 				challengePC = challengePC.add(new BigInteger("1"));
+				
+				this.ChallengeCheck(DecPCcha, DecMOBcha);
 				
 				byte[] reqPort = PortMsg.get_Content();
 				byte[] DECreqPort = this.decript(reqPort, pvkey);
@@ -236,16 +269,15 @@ public class PhoneListener implements Runnable {
 				// Saves Request Port
 				REQUEST_PORT = ByteBuffer.wrap(DECreqPort).getInt();
 				System.out.println("Saved Request Port!");
-				System.out.println(REQUEST_PORT);
+				
 				// Opens request socket
 				this.request(REQUEST_PORT);
 
 				
-				//Second message
-				challengePC = challengePC.add(new BigInteger("1"));
-				System.out.println(challengePC);
-				challengeMOB = challengeMOB.add(new BigInteger("1"));
-				System.out.println(challengeMOB);
+				//SECOND MESSAGE
+				
+				//Increment challenges
+				this.ChallengeInc();
 
 				
 				byte[] encPC2 = this.encript(challengePC.toByteArray(), mbKey);
@@ -298,20 +330,12 @@ public class PhoneListener implements Runnable {
 		}
 	}
 
-	private byte[] Input() throws IOException {
-
-		BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
-		System.out.println("Enter c to Encrypt or d to Decrypt");
-		String type = br.readLine().trim().toLowerCase();
-		byte[] req = type.getBytes();
-
-		return req;
-	}
+	
 
 	public void transfer() {
 
 		try {
-			while (true) {
+			while (!done) {
 
 				byte[] buffer2 = new byte[2048];
 				byte[] bufferDec = new byte[2048];
@@ -329,10 +353,7 @@ public class PhoneListener implements Runnable {
 					byte[] enc = this.encript(file, mbKey);
 
 					//Challenge Inc
-					challengePC = challengePC.add(new BigInteger("1"));
-					System.out.println(challengePC);
-					challengeMOB = challengeMOB.add(new BigInteger("1"));
-					System.out.println(challengeMOB);
+					this.ChallengeInc();
 
 					
 					byte[] encPC2 = this.encript(challengePC.toByteArray(), mbKey);
@@ -348,6 +369,7 @@ public class PhoneListener implements Runnable {
 
 
 					this.sendPacket(MsgtoSend, REQUEST_PORT);
+					System.out.println("Encrypt request sent!");
 
 					// Receive ciphered file
 					DatagramPacket cipheredMsg = new DatagramPacket(buffer2, buffer2.length);
@@ -359,21 +381,10 @@ public class PhoneListener implements Runnable {
 					byte[] DecPCcha = this.decript(ciphMsg.get_pcChallange(), pvkey);
 					byte[] DecMOBcha = this.decript(ciphMsg.get_phoneChallange(), pvkey);
 					
-					challengePC = challengePC.add(new BigInteger("1"));
-					System.out.println(challengePC);
-					challengeMOB = challengeMOB.add(new BigInteger("1"));
-					System.out.println(challengeMOB);
+					this.ChallengeInc();
 					
-					if(challengePC.equals(new BigInteger(DecPCcha))){
-						System.out.println("Challenge PC OK!");
-					}
-					
-					if(challengeMOB.equals(new BigInteger(DecMOBcha))){
-						System.out.println("Challenge MOB OK!");
-					}
-					
-					
-					
+					this.ChallengeCheck(DecPCcha, DecMOBcha);
+
 					byte[] ciphContent = ciphMsg.get_Content();
 
 					// Saves ciphered message to file
@@ -398,11 +409,7 @@ public class PhoneListener implements Runnable {
 					byte[] fileDec = Files.readAllBytes(pathDec);
 
 					//Challenge Inc
-					challengePC = challengePC.add(new BigInteger("1"));
-					System.out.println(challengePC);
-					challengeMOB = challengeMOB.add(new BigInteger("1"));
-					System.out.println(challengeMOB);
-
+					//this.ChallengeInc();
 					
 					byte[] encPC3 = this.encript(challengePC.toByteArray(), mbKey);
 					byte[] encMOB3 = this.encript(challengeMOB.toByteArray(), mbKey);
@@ -416,6 +423,9 @@ public class PhoneListener implements Runnable {
 					MsgtoDec = Message.getEncoded(EncMsgDec);
 
 					this.sendPacket(MsgtoDec, REQUEST_PORT);
+					
+					System.out.println("Decrypt request sent!");
+
 
 					// Receive deciphered file
 					DatagramPacket DecipheredMsg = new DatagramPacket(bufferDec, bufferDec.length);
@@ -427,20 +437,11 @@ public class PhoneListener implements Runnable {
 					byte[] DecPCcha2 = this.decript(ciphMsg.get_pcChallange(), pvkey);
 					byte[] DecMOBcha2 = this.decript(ciphMsg.get_phoneChallange(), pvkey);
 					
-					challengePC = challengePC.add(new BigInteger("1"));
-					System.out.println(challengePC);
-					challengeMOB = challengeMOB.add(new BigInteger("1"));
-					System.out.println(challengeMOB);
+					//Challenge Inc
+					//this.ChallengeInc();
 					
-					if(challengePC.equals(new BigInteger(DecPCcha2))){
-						System.out.println("Challenge PC OK!");
-					}
-					
-					if(challengeMOB.equals(new BigInteger(DecMOBcha2))){
-						System.out.println("Challenge MOB OK!");
-					}
-					
-					
+					this.ChallengeCheck(DecPCcha2, DecMOBcha2);
+
 					
 					byte[] DeciphContent = DeciphMsg.get_Content();
 					byte[] Content = this.decript(DeciphContent, pvkey);
